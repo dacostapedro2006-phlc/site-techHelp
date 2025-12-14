@@ -80,6 +80,8 @@ function selectService(id) {
   switchTab("request");
 }
 
+const SUPABASE_URL = "https://gxdbekmostayispyxbis.supabase.co";
+const SUPABASE_KEY = "sb_publishable_YSFRs0Cm_146XF5Xv6zJEg_rmBHZo3-";
 async function submitRequest(e) {
   e.preventDefault();
 
@@ -94,21 +96,34 @@ async function submitRequest(e) {
   };
 
   try {
-    const res = await fetch("/api/requests", {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
       body: JSON.stringify(data)
     });
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(err);
+      alert("Erro: " + err);
+      return;
+    }
 
-    alert("✅ Solicitação enviada!");
+    alert("✅ Solicitação enviada com sucesso!");
     e.target.reset();
     switchTab("services");
-  } catch {
+
+  } catch (error) {
+    console.error(error);
     alert("❌ Erro ao enviar solicitação");
   }
 }
+
 
 function render() {
   const app = document.getElementById("app");
