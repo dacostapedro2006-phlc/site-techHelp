@@ -1,3 +1,9 @@
-"# site-techHelp"  
-"# site-techHelp"  
-"# site-techHelp" 
+O **Site TechHelp** é uma aplicação web criada para gerenciar solicitações de serviços de tecnologia da informação, permitindo que usuários visualizem os serviços disponíveis e enviem pedidos de atendimento de forma prática. O projeto foi desenvolvido com foco em organização, simplicidade e aprendizado, separando claramente frontend e backend.
+
+A pasta raiz do projeto contém o arquivo **`server.js`**, responsável por inicializar o servidor utilizando **Node.js e Express**. Esse arquivo configura o servidor, define a porta de execução, disponibiliza os arquivos estáticos do frontend e implementa a rota **`/api/requests`**, que recebe as solicitações enviadas pelo formulário do site e as salva no arquivo **`requests.json`**, simulando um banco de dados. O arquivo **`requests.json`** armazena todas as solicitações realizadas pelos usuários, incluindo data, serviço escolhido e dados de contato.
+
+A pasta **`public`** concentra os arquivos do frontend da aplicação. Nela está o **`index.html`**, que define a estrutura da página, como título, navegação, seções de serviços e formulário de solicitação. O arquivo **`style.css`** é responsável pela estilização do site, controlando cores, layout, espaçamentos e aparência visual dos componentes, garantindo uma interface agradável e responsiva. Já o arquivo **`script.js`** contém toda a lógica de interação do site, como troca de abas, seleção de serviços, captura dos dados do formulário e envio das informações para o backend por meio de requisições HTTP utilizando a API Fetch.
+
+O arquivo **`package.json`** descreve o projeto, suas dependências e scripts de execução. Nele estão definidas as bibliotecas utilizadas, como o **Express**, além do script **`npm start`**, que inicia o servidor. Esse arquivo permite que qualquer pessoa execute o projeto corretamente após instalar as dependências.
+
+A estrutura do projeto foi pensada para facilitar manutenção e expansão, permitindo que novos serviços sejam adicionados facilmente, assim como futuras melhorias, como autenticação de usuários, painel administrativo, uso de banco de dados real ou publicação em servidores de produção.
