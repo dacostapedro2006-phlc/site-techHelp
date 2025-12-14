@@ -1,32 +1,37 @@
-const express = require("express");
-const fs = require("fs");
-const path = require("path");
+const SUPABASE_URL = "https://gxdbekmostayispyxbis.supabase.co";
+const SUPABASE_KEY = "sb_publishable_T9jQLd0g7bIS-bUVU6s-OA_z0g_y0r2";
 
-const app = express();
-const PORT = 3000;
+async function submitRequest(e) {
+  e.preventDefault();
 
-app.use(express.json());
-app.use(express.static(__dirname));
+  const form = new FormData(e.target);
 
-const DB_FILE = path.join(__dirname, "requests.json");
+  const data = {
+    service: form.get("service"),
+    name: form.get("name"),
+    phone: form.get("phone"),
+    address: form.get("address"),
+    description: form.get("description")
+  };
 
-if (!fs.existsSync(DB_FILE)) {
-  fs.writeFileSync(DB_FILE, "[]");
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!res.ok) throw new Error();
+
+    alert("✅ Solicitação enviada com sucesso!");
+    e.target.reset();
+    switchTab("services");
+  } catch {
+    alert("❌ Erro ao enviar solicitação");
+  }
 }
-
-app.post("/api/requests", (req, res) => {
-  const requests = JSON.parse(fs.readFileSync(DB_FILE, "utf-8"));
-
-  requests.push({
-    id: Date.now(),
-    ...req.body,
-    created_at: new Date().toISOString()
-  });
-
-  fs.writeFileSync(DB_FILE, JSON.stringify(requests, null, 2));
-  res.json({ success: true });
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-});
