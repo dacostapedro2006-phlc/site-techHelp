@@ -1,5 +1,5 @@
 const SUPABASE_URL = "https://gxdbekmostayispyxbis.supabase.co";
-const SUPABASE_KEY = "SUA_CHAVE_ANON_AQUI";
+const SUPABASE_KEY = "sb_publishable_YSFRs0Cm_146XF5Xv6zJEg_rmBHZo3-";
 
 async function submitRequest(e) {
   e.preventDefault();
