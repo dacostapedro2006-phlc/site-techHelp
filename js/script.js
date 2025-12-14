@@ -66,7 +66,6 @@ const services = [
   }
 ];
 
-
 let currentTab = "services";
 let selectedService = null;
 
@@ -124,13 +123,17 @@ async function submitRequest(e) {
   }
 }
 
+function getSelectedService() {
+  return services.find(s => s.id === selectedService);
+}
 
 function render() {
   const app = document.getElementById("app");
 
   app.innerHTML = `
     <div class="max-w-5xl mx-auto p-6">
-      <h1 class="text-3xl font-bold text-center">${config.company}</h1>
+      
+      <h1 class="text-3xl font-bold text-center"><a href="/" class=" mb-4 inline-block">${config.company}</a></h1>
       <p class="text-center text-slate-400 mb-8">${config.tagline}</p>
 
       <nav class="flex justify-center gap-6 mb-8">
@@ -149,13 +152,16 @@ function render() {
           `).join("")}
         </div>
       ` : ""}
-
+      
       ${currentTab === "request" ? `
         <form onsubmit="submitRequest(event)"
               class="max-w-xl mx-auto bg-slate-800 p-6 rounded">
           <select name="service" class="input-field mb-4" required>
             <option value="">Selecione</option>
-            ${services.map(s => `<option>${s.name}</option>`).join("")}
+            ${services.map(s => `
+              <option value="${s.name}" ${selectedService === s.id ? "selected" : ""}>
+                ${s.name}
+              </option>`).join("")}
           </select>
 
           <input name="name" placeholder="Nome" class="input-field mb-4" required />
