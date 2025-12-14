@@ -27,7 +27,7 @@ const services = [
 let currentTab = "services";
 let selectedServices = [];
 
-// -------------------- Funções de Navegação --------------------
+// -------------------- Funções de Navbbbegação --------------------
 
 // Alterna entre as abas "services" e "request"
 function switchTab(tab) {
