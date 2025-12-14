@@ -1,5 +1,5 @@
 const SUPABASE_URL = "https://gxdbekmostayispyxbis.supabase.co";
-const SUPABASE_KEY = "sb_publishable_T9jQLd0g7bIS-bUVU6s-OA_z0g_y0r2";
+const SUPABASE_KEY = "SUA_CHAVE_ANON_AQUI";
 
 async function submitRequest(e) {
   e.preventDefault();
@@ -18,15 +18,18 @@ async function submitRequest(e) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
       method: "POST",
       headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(data)
     });
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(err);
+      throw new Error();
+    }
 
     alert("✅ Solicitação enviada com sucesso!");
     e.target.reset();
