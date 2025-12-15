@@ -34,13 +34,70 @@ function switchTab(tab) {
 
 function toggleService(id) {
   const index = selectedServices.indexOf(id);
-  index > -1 ? selectedServices.splice(index, 1) : selectedServices.push(id);
+
+  if (index > -1) {
+    selectedServices.splice(index, 1);
+  } else {
+    selectedServices.push(id);
+  }
+
   render();
 }
 
 // ==================== SUPABASE ====================
 const SUPABASE_URL = "https://gxdbekmostayispyxbis.supabase.co";
 const SUPABASE_KEY = "sb_publishable_YSFRs0Cm_146XF5Xv6zJEg_rmBHZo3-";
+
+// ==================== NOTIFICAÇÕES ====================
+function showNotification(message, type = "success", duration = 4000, extraHTML = "") {
+  let container = document.getElementById("notification-container");
+
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "notification-container";
+    container.className = "fixed top-4 right-4 z-50 space-y-3";
+    document.body.appendChild(container);
+  }
+
+  const colors = {
+    success: "bg-green-600",
+    error: "bg-red-600",
+    info: "bg-blue-600"
+  };
+
+  const icons = {
+    success: "✅",
+    error: "❌",
+    info: "ℹ️"
+  };
+
+  const notification = document.createElement("div");
+  notification.className = `
+    ${colors[type]} text-white px-4 py-4 rounded-xl shadow-lg
+    opacity-0 transition-all
+  `;
+
+  notification.innerHTML = `
+    <div class="flex gap-2 items-start">
+      <span>${icons[type]}</span>
+      <div class="text-sm leading-snug">
+        <p>${message}</p>
+        ${extraHTML}
+      </div>
+    </div>
+  `;
+
+  container.appendChild(notification);
+
+  requestAnimationFrame(() => {
+    notification.classList.remove("opacity-0");
+  });
+
+  setTimeout(() => {
+    notification.classList.add("opacity-0");
+    setTimeout(() => notification.remove(), 300);
+  }, duration);
+}
 
 // ==================== ENVIO ====================
 async function submitRequest(e) {
@@ -53,10 +110,14 @@ async function submitRequest(e) {
 
   const form = new FormData(e.target);
 
+  const serviceNames = selectedServices
+    .map(id => services.find(s => s.id === id))
+    .filter(Boolean)
+    .map(s => s.name)
+    .join(", ");
+
   const data = {
-    service: selectedServices
-      .map(id => services.find(s => s.id === id).name)
-      .join(", "),
+    service: serviceNames,
     name: form.get("name"),
     phone: form.get("phone"),
     address: form.get("address"),
@@ -74,9 +135,7 @@ async function submitRequest(e) {
       body: JSON.stringify(data)
     });
 
-    if (!res.ok) {
-      throw new Error("Erro ao enviar solicitação");
-    }
+    if (!res.ok) throw new Error("Erro ao enviar solicitação");
 
     showNotification("Solicitação enviada com sucesso! ✅", "success");
     selectedServices = [];
@@ -86,12 +145,26 @@ async function submitRequest(e) {
   } catch (err) {
     console.error(err);
 
-    showNotification(
-      `Erro ao enviar solicitação. 
-       Se o erro persistir, entre em contato com o desenvolvedor.`,
-      "error",
-      6000
+    const whatsappMsg = encodeURIComponent(
+      "Olá! Ocorreu um erro ao enviar uma solicitação pelo site TechHelp."
     );
+
+    showNotification(
+      "Erro ao enviar solicitação. Se o erro persistir, entre em contato com o desenvolvedor.",
+      "error",
+      7000,
+      `
+        <a
+          href="https://wa.me/${config.whatsapp}?text=${whatsappMsg}"
+          target="_blank"
+          class="mt-3 inline-block bg-green-500 hover:bg-green-400 text-white px-4 py-2 rounded-lg font-semibold text-xs"
+        >
+          📲 Falar com o desenvolvedor
+        </a>
+      `
+    );
+  }
+}
 
     // Botão de contato via WhatsApp
     const whatsappMsg = encodeURIComponent(
@@ -115,29 +188,52 @@ async function submitRequest(e) {
         if (btn.parentNode) btn.parentNode.removeChild(btn);
       }, 8000);
     }
-  }
-}
+
 
 
 // ==================== RENDER ====================
 function render() {
   const app = document.getElementById("app");
 
+  // ==================== RESUMO DE SERVIÇOS ====================
+  const parsePrice = price => {
+    if (!price || price === "Sob consulta") return 0;
+    return Number(
+      price.replace("R$", "").replace(/\./g, "").replace(",", ".").trim()
+    );
+  };
+
+  let total = 0;
+
   const summaryHTML = selectedServices.length
-    ? selectedServices.map(id => {
+    ? `
+      ${selectedServices.map(id => {
         const s = services.find(s => s.id === id);
+        if (!s) return "";
+
+        total += parsePrice(s.price);
+
         return `
           <div class="flex justify-between text-sm">
             <span>${s.icon} ${s.name}</span>
             <span class="text-blue-400">${s.price}</span>
           </div>
         `;
-      }).join("")
+      }).join("")}
+
+      <hr class="my-2 border-slate-600">
+      <div class="flex justify-between font-bold text-white">
+        <span>Total</span>
+        <span>R$ ${total.toFixed(2)}</span>
+      </div>
+    `
     : `<p class="text-slate-400 text-center">Nenhum serviço selecionado</p>`;
 
+  // ==================== TEMPLATE PRINCIPAL ====================
   app.innerHTML = `
     <div class="max-w-5xl mx-auto p-6">
 
+      <!-- ==================== TOPO / LOGO ==================== -->
       ${currentTab !== "intro" ? `
         <div class="flex justify-center mb-4">
           <img src="./imgs/Design sem nome.png" class="h-16">
@@ -146,12 +242,14 @@ function render() {
         <h1 class="text-3xl font-bold text-center mb-2">${config.company}</h1>
         <p class="text-center text-slate-400 italic mb-6">${config.tagline}</p>
 
+        <!-- ==================== NAVEGAÇÃO ==================== -->
         <nav class="flex justify-center gap-6 mb-10">
           <button onclick="switchTab('services')" class="px-6 py-3 bg-blue-600 rounded-xl">💻 Serviços</button>
           <button onclick="switchTab('request')" class="px-6 py-3 bg-green-600 rounded-xl">📋 Solicitar</button>
         </nav>
       ` : ""}
 
+      <!-- ==================== INTRO ==================== -->
       ${currentTab === "intro" ? `
         <div class="min-h-screen flex items-center justify-center">
           <div class="max-w-xl text-center p-6">
@@ -178,14 +276,12 @@ function render() {
             </div>
 
             <div class="flex flex-col sm:flex-row justify-center gap-4">
-              <button
-                onclick="switchTab('services')"
+              <button onclick="switchTab('services')"
                 class="px-6 py-3 bg-blue-600 rounded-xl font-semibold">
                 💻 Ver Serviços
               </button>
 
-              <a
-                target="_blank"
+              <a target="_blank"
                 href="https://wa.me/${config.whatsapp}?text=Olá!%20Vim%20do%20site%20TechHelp%20e%20gostaria%20de%20informações."
                 class="px-6 py-3 bg-green-600 rounded-xl font-semibold">
                 📲 WhatsApp
@@ -195,7 +291,7 @@ function render() {
         </div>
       ` : ""}
 
-
+      <!-- ==================== LISTA DE SERVIÇOS ==================== -->
       ${currentTab === "services" ? `
         <div class="grid md:grid-cols-2 gap-4">
           ${services.map(s => `
@@ -217,16 +313,19 @@ function render() {
 
         ${selectedServices.length ? `
           <button onclick="switchTab('request')"
-            class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-green-500 text-white text-2xl shadow-lg">
+            class="fixed bottom-6 right-6 w-14 h-14 rounded-full
+                   bg-green-500 text-white text-2xl shadow-lg">
             ✔
           </button>
         ` : ""}
       ` : ""}
 
+      <!-- ==================== FORMULÁRIO DE SOLICITAÇÃO ==================== -->
       ${currentTab === "request" ? `
         <form onsubmit="submitRequest(event)"
           class="max-w-xl mx-auto bg-slate-800 p-6 rounded space-y-4">
 
+          <!-- Gaveta de seleção -->
           <details class="bg-slate-700 p-3 rounded">
             <summary class="cursor-pointer font-semibold text-white">
               Selecionar serviços
@@ -243,11 +342,13 @@ function render() {
             </div>
           </details>
 
+          <!-- Resumo -->
           <div class="bg-slate-900 p-4 rounded">
             <h3 class="font-semibold mb-2">Resumo</h3>
             ${summaryHTML}
           </div>
 
+          <!-- Dados do cliente -->
           <input name="name" placeholder="Nome" required class="w-full p-2 rounded bg-slate-700">
           <input name="phone" placeholder="Telefone" required class="w-full p-2 rounded bg-slate-700">
           <input name="address" placeholder="Endereço" required class="w-full p-2 rounded bg-slate-700">
