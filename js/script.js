@@ -52,6 +52,7 @@ const SUPABASE_KEY = "sb_publishable_YSFRs0Cm_146XF5Xv6zJEg_rmBHZo3-";
 function showNotification(message, type = "success", duration = 4000, extraHTML = "") {
   let container = document.getElementById("notification-container");
 
+  // Cria o container se não existir
   if (!container) {
     container = document.createElement("div");
     container.id = "notification-container";
@@ -59,18 +60,21 @@ function showNotification(message, type = "success", duration = 4000, extraHTML 
     document.body.appendChild(container);
   }
 
+  // Cores por tipo
   const colors = {
     success: "bg-green-600",
     error: "bg-red-600",
     info: "bg-blue-600"
   };
 
+  // Ícones por tipo
   const icons = {
     success: "✅",
     error: "❌",
     info: "ℹ️"
   };
 
+  // Card da notificação
   const notification = document.createElement("div");
   notification.className = `
     ${colors[type]} text-white px-4 py-4 rounded-xl shadow-lg
@@ -89,39 +93,45 @@ function showNotification(message, type = "success", duration = 4000, extraHTML 
 
   container.appendChild(notification);
 
+  // Anima entrada
   requestAnimationFrame(() => {
     notification.classList.remove("opacity-0");
   });
 
+  // Remove após o tempo definido
   setTimeout(() => {
     notification.classList.add("opacity-0");
     setTimeout(() => notification.remove(), 300);
   }, duration);
 }
 
-// ==================== ENVIO ====================
+// ==================== ENVIO DA SOLICITAÇÃO ====================
 async function submitRequest(e) {
   e.preventDefault();
 
+  // Validação básica
   if (!selectedServices.length) {
     showNotification("Selecione ao menos um serviço.", "info");
     return;
   }
 
+  // Coleta dados do formulário
   const form = new FormData(e.target);
 
+  // Converte IDs selecionados em nomes (garante envio correto ao banco)
   const serviceNames = selectedServices
     .map(id => services.find(s => s.id === id))
     .filter(Boolean)
     .map(s => s.name)
     .join(", ");
 
+  // Payload exatamente no formato esperado pelo Supabase
   const data = {
-    service: serviceNames,
-    name: form.get("name"),
-    phone: form.get("phone"),
-    address: form.get("address"),
-    description: form.get("description")
+    service: serviceNames,          // NÃO pode ser null (coluna NOT NULL)
+    name: form.get("name")?.trim(),
+    phone: form.get("phone")?.trim(),
+    address: form.get("address")?.trim(),
+    description: form.get("description")?.trim()
   };
 
   try {
@@ -130,25 +140,35 @@ async function submitRequest(e) {
       headers: {
         apikey: SUPABASE_KEY,
         Authorization: `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        Prefer: "return=minimal" // evita retorno desnecessário e erros de parse
       },
       body: JSON.stringify(data)
     });
 
-    if (!res.ok) throw new Error("Erro ao enviar solicitação");
+    // Erro HTTP
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || "Erro ao enviar solicitação");
+    }
 
+    // Sucesso
     showNotification("Solicitação enviada com sucesso! ✅", "success");
+
+    // Reset de estado
     selectedServices = [];
     e.target.reset();
     switchTab("services");
 
   } catch (err) {
-    console.error(err);
+    console.error("Erro Supabase:", err);
 
+    // Mensagem automática para WhatsApp
     const whatsappMsg = encodeURIComponent(
       "Olá! Ocorreu um erro ao enviar uma solicitação pelo site TechHelp."
     );
 
+    // Notificação de erro com CTA
     showNotification(
       "Erro ao enviar solicitação. Se o erro persistir, entre em contato com o desenvolvedor.",
       "error",
