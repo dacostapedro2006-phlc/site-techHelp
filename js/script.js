@@ -3,7 +3,7 @@ const config = {
   tagline: "// Soluções em TI com qualidade e agilidade",
   nome: "Pedro Costa",
   insta: "https://www.instagram.com/pedro.tech_costa?igsh=MThycXYxem5vOTkyMg==",
-  whatsapp: "552196805999"
+  whatsapp: "5521976805999"
 };
 
 const services = [
