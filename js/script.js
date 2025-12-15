@@ -47,40 +47,77 @@ async function submitRequest(e) {
   e.preventDefault();
 
   if (!selectedServices.length) {
-    alert("Selecione ao menos um serviço");
+    showNotification("Selecione ao menos um serviço.", "info");
     return;
   }
 
   const form = new FormData(e.target);
 
   const data = {
-    service: selectedServices.map(id => services.find(s => s.id === id).name).join(", "),
+    service: selectedServices
+      .map(id => services.find(s => s.id === id).name)
+      .join(", "),
     name: form.get("name"),
     phone: form.get("phone"),
     address: form.get("address"),
     description: form.get("description")
   };
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
-  });
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
 
-  if (!res.ok) {
-    alert("Erro ao enviar solicitação");
-    return;
+    if (!res.ok) {
+      throw new Error("Erro ao enviar solicitação");
+    }
+
+    showNotification("Solicitação enviada com sucesso! ✅", "success");
+    selectedServices = [];
+    e.target.reset();
+    switchTab("services");
+
+  } catch (err) {
+    console.error(err);
+
+    showNotification(
+      `Erro ao enviar solicitação. 
+       Se o erro persistir, entre em contato com o desenvolvedor.`,
+      "error",
+      6000
+    );
+
+    // Botão de contato via WhatsApp
+    const whatsappMsg = encodeURIComponent(
+      "Olá! Tive um erro ao enviar uma solicitação pelo site TechHelp. Pode me ajudar?"
+    );
+
+    const container = document.getElementById("notification-container");
+
+    if (container) {
+      const btn = document.createElement("a");
+      btn.href = `https://wa.me/${config.whatsapp}?text=${whatsappMsg}`;
+      btn.target = "_blank";
+      btn.className =
+        "mt-2 inline-block bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition";
+      btn.textContent = "📲 Falar com o desenvolvedor";
+
+      container.appendChild(btn);
+
+      // Remove o botão após um tempo para não poluir a tela
+      setTimeout(() => {
+        if (btn.parentNode) btn.parentNode.removeChild(btn);
+      }, 8000);
+    }
   }
-
-  alert("Solicitação enviada com sucesso!");
-  selectedServices = [];
-  e.target.reset();
-  switchTab("services");
 }
+
 
 // ==================== RENDER ====================
 function render() {
