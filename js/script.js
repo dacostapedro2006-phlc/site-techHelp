@@ -106,110 +106,122 @@ function showNotification(message, type = "success", duration = 4000, extraHTML 
 }
 
 // ==================== ENVIO DA SOLICITAÇÃO ====================
+// Função chamada ao enviar o formulário
 async function submitRequest(e) {
+  // Impede o reload da página
   e.preventDefault();
 
-  // Validação básica
+  // Validação: precisa ter ao menos um serviço selecionado
   if (!selectedServices.length) {
     showNotification("Selecione ao menos um serviço.", "info");
     return;
   }
 
-  // Coleta dados do formulário
+  // Captura os dados do formulário
   const form = new FormData(e.target);
 
-  // Converte IDs selecionados em nomes (garante envio correto ao banco)
+  // Converte os IDs dos serviços selecionados em nomes legíveis
+  // Ex: ["formatacao", "limpeza"] → "Formatação de Windows, Limpeza Interna"
   const serviceNames = selectedServices
-    .map(id => services.find(s => s.id === id))
-    .filter(Boolean)
-    .map(s => s.name)
-    .join(", ");
-
-  // Payload exatamente no formato esperado pelo Supabase
-  const data = {
-    service: serviceNames,          // NÃO pode ser null (coluna NOT NULL)
-    name: form.get("name")?.trim(),
-    phone: form.get("phone")?.trim(),
-    address: form.get("address")?.trim(),
-    description: form.get("description")?.trim()
-  };
+    .map(id => services.find(s => s.id === id)) // busca serviço pelo ID
+    .filter(Boolean)                            // remove valores inválidos
+    .map(s => s.name)                           // pega apenas o nome
+    .join(", ");                                // junta tudo em uma string
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+    // ===============================
+    // 1️⃣ CRIAR CLIENTE
+    // ===============================
+    const clienteRes = await fetch(`${SUPABASE_URL}/rest/v1/clientes`, {
       method: "POST",
       headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
+        apikey: SUPABASE_KEY,                     // chave pública (anon)
+        Authorization: `Bearer ${SUPABASE_KEY}`,  // autenticação
         "Content-Type": "application/json",
-        Prefer: "return=minimal" // evita retorno desnecessário e erros de parse
+        Prefer: "return=representation"           // retorna o registro criado
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        nome: form.get("name").trim(),            // nome do cliente
+        telefone: form.get("phone").trim(),       // telefone
+        email: null                               // e-mail opcional (futuro)
+      })
     });
 
-    // Erro HTTP
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(errText || "Erro ao enviar solicitação");
+    // Se falhar ao criar cliente, dispara erro
+    if (!clienteRes.ok) {
+      throw new Error("Erro ao criar cliente");
     }
 
-    // Sucesso
-    showNotification("Solicitação enviada com sucesso! ✅", "success");
+    // Supabase retorna um array com o registro criado
+    const [cliente] = await clienteRes.json();
 
-    // Reset de estado
+    // ===============================
+    // 2️⃣ CRIAR TICKET
+    // ===============================
+const ticketRes = await fetch(`${SUPABASE_URL}/rest/v1/tickets`, {
+  method: "POST",
+  headers: {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    cliente_id: cliente.id,
+    problema: `
+Serviços: ${serviceNames}
+
+Endereço: ${form.get("address") || "Não informado"}
+
+Descrição: ${form.get("description") || ""}
+    `.trim(),
+    status: "aberto"
+  })
+}); // ✅ FECHAMENTO CORRETO DO FETCH
+
+// Se falhar ao criar ticket, dispara erro
+if (!ticketRes.ok) {
+  throw new Error("Erro ao criar ticket");
+}
+
+
+    // ===============================
+    // SUCESSO
+    // ===============================
+    showNotification(
+      "Solicitação enviada com sucesso! 🎉",
+      "success"
+    );
+
+    // Limpa seleção de serviços
     selectedServices = [];
+
+    // Reseta o formulário
     e.target.reset();
+
+    // Volta para a tela de serviços
     switchTab("services");
 
   } catch (err) {
-    console.error("Erro Supabase:", err);
+    // Log no console para debug
+    console.error("Erro ao enviar solicitação:", err);
 
-    // Mensagem automática para WhatsApp
-    const whatsappMsg = encodeURIComponent(
-      "Olá! Ocorreu um erro ao enviar uma solicitação pelo site TechHelp."
-    );
-
-    // Notificação de erro com CTA
+    // Notificação de erro para o usuário
     showNotification(
-      "Erro ao enviar solicitação. Se o erro persistir, entre em contato com o desenvolvedor.",
+      "Erro ao enviar solicitação. Tente novamente ou chame no WhatsApp.",
       "error",
       7000,
       `
-        <a
-          href="https://wa.me/${config.whatsapp}?text=${whatsappMsg}"
-          target="_blank"
-          class="mt-3 inline-block bg-green-500 hover:bg-green-400 text-white px-4 py-2 rounded-lg font-semibold text-xs"
-        >
-          📲 Falar com o desenvolvedor
-        </a>
+      <a
+        href="https://wa.me/${config.whatsapp}"
+        target="_blank"
+        class="mt-3 inline-block bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-semibold"
+      >
+        📲 WhatsApp
+      </a>
       `
     );
   }
 }
-
-    // Botão de contato via WhatsApp
-    const whatsappMsg = encodeURIComponent(
-      "Olá! Tive um erro ao enviar uma solicitação pelo site TechHelp. Pode me ajudar?"
-    );
-
-    const container = document.getElementById("notification-container");
-
-    if (container) {
-      const btn = document.createElement("a");
-      btn.href = `https://wa.me/${config.whatsapp}?text=${whatsappMsg}`;
-      btn.target = "_blank";
-      btn.className =
-        "mt-2 inline-block bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition";
-      btn.textContent = "📲 Falar com o desenvolvedor";
-
-      container.appendChild(btn);
-
-      // Remove o botão após um tempo para não poluir a tela
-      setTimeout(() => {
-        if (btn.parentNode) btn.parentNode.removeChild(btn);
-      }, 8000);
-    }
-
-
 
 // ==================== RENDER ====================
 function render() {
